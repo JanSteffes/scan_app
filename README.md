@@ -18,3 +18,9 @@ Example: file "test.pdf" exists already and a new scan is requested with that na
 Displays a list of files of the current directory (e.g. current date - all files from today).
 There, files can be deleted, or merged together. Naming of resulting files is like in Scan.
 
+# TODO:
+
+* add PDF Viewer to view scanned pdfs
+* add more options to edit files (rename, rotate,..)
+* overwork views, they're mostly build for functionality, not to look good ;)
+* add some other design stuff, like splashscreen, icon, etc etc
