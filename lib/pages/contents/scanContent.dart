@@ -39,7 +39,7 @@ class _ScanContentState extends ContentState<ScanContent> {
             mainAxisAlignment: MainAxisAlignment.center));
   }
 
-  Future successfullExcecutionCallBack() {
+  Future successfullExcecutionCallBack(dynamic result) {
     showSuccessSnackbar();
     return null;
   }
@@ -111,6 +111,10 @@ class _ScanContentState extends ContentState<ScanContent> {
 
   @override
   bool validateInputs() {
-    return _fileNameTextController.text.isNotEmpty;
+    var valid = _fileNameTextController.text.isNotEmpty;
+    if (!valid) {
+      showErrorSnackbar("Dateiname angeben!");
+    }
+    return valid;
   }
 }

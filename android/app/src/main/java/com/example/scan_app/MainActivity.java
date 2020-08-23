@@ -1,14 +1,15 @@
 package com.example.scan_app;
 
 import android.os.StrictMode;
+import android.text.TextUtils;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Stream;
 
 import androidx.annotation.NonNull;
-import data.packages.implementations.PackageDataDelete;
-import data.packages.implementations.PackageDataList;
-import data.packages.implementations.PackageDataMerge;
-import data.packages.implementations.PackageDataScan;
+import data.packages.implementations.*;
 import io.flutter.embedding.android.FlutterActivity;
 import io.flutter.embedding.engine.FlutterEngine;
 import io.flutter.plugin.common.MethodCall;
@@ -42,6 +43,9 @@ public class MainActivity extends FlutterActivity {
                             case "deleteRequest":
                                 runnable = deleteRequestRunnable(call, result);
                                 break;
+                            case "getRequest":
+                                runnable = getRequestRunnable(call, result);
+                                break;
                             default:
                                 result.notImplemented();
                                 return;
@@ -51,44 +55,55 @@ public class MainActivity extends FlutterActivity {
             );
   }
 
-  private Runnable mergeRequestRunnable(MethodCall call, MethodChannel.Result result)
-  {
+  private Runnable getRequestRunnable(MethodCall call, MethodChannel.Result result){
+    Runnable r = () -> {
+      String fileName = call.argument("FileName");
+      byte[] fileResult = new PackageDataGetFile(fileName).Execute();
+      System.out.println("GetResult: " + fileResult.length + " bytes");
+      runOnUiThread(() -> result.success(fileResult));
+    };
+    return r;
+  }
+
+    private Runnable mergeRequestRunnable(MethodCall call, MethodChannel.Result result)
+    {
       Runnable r = () -> {
       String resultFileName = call.argument("FileName");
       ArrayList<String> mergeFileNames = call.argument("FileNames");
-      String mergeResult = new PackageDataMerge(resultFileName, mergeFileNames).Execute();
+      boolean mergeResult = new PackageDataMerge(resultFileName, mergeFileNames).Execute();
       System.out.println("MergeResult: " + mergeResult);
         runOnUiThread(() -> result.success(mergeResult));
       };
       return r;
-  }
+    }
 
-  private Runnable deleteRequestRunnable(MethodCall call, MethodChannel.Result result)
-  {
+    private Runnable deleteRequestRunnable(MethodCall call, MethodChannel.Result result)
+    {
     Runnable r = () -> {
         ArrayList<String> deleteFileNames = call.argument("FileNames");
-        String mergeResult = new PackageDataDelete(deleteFileNames).Execute();
+        boolean mergeResult = new PackageDataDelete(deleteFileNames).Execute();
         System.out.println("DeleteResult: " + mergeResult);
           runOnUiThread(() -> result.success(mergeResult));
         };
     return r;
-  }
+    }
 
-  private Runnable listRequestRunnable(MethodChannel.Result result) {
+    private Runnable listRequestRunnable(MethodChannel.Result result) {
       Runnable r = () -> {
-          String resultString = new PackageDataList().Execute();
-      String resultList = resultString == null ? "" : resultString;
-          runOnUiThread(() -> result.success(resultList));
+          String[] listResult = new PackageDataList().Execute();
+          System.out.println("ListResult: " + TextUtils.join(", ", listResult));
+          List<String> resultValue = new ArrayList<>(Arrays.asList(listResult));
+          runOnUiThread(() -> result.success(resultValue));
       };
       return r;
-  }
+    }
 
     private Runnable scanRequestRunnable(MethodCall call, MethodChannel.Result result) {
         Runnable r = () -> {
             String fileName = call.argument("FileName");
             int scanQuality = call.argument("ScanQuality");
             PackageDataScan packageData = new PackageDataScan(scanQuality, fileName);
-            String scanResult = packageData.Execute();
+            boolean scanResult = packageData.Execute();
             System.out.println("ScanResult: " + scanResult);
             runOnUiThread(() -> result.success(scanResult));
         };
