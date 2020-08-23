@@ -1,6 +1,6 @@
 # scan_app
 
-App to communicate with ScanServer
+App to communicate with [ScanServer](https://github.com/JanSteffes/ScanServer)
 
 ## Getting Started
 
@@ -17,3 +17,4 @@ Example: file "test.pdf" exists already and a new scan is requested with that na
 
 Displays a list of files of the current directory (e.g. current date - all files from today).
 There, files can be deleted, or merged together. Naming of resulting files is like in Scan.
+
