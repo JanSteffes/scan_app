@@ -1,16 +1,19 @@
 # scan_app
 
-A new Flutter project.
+App to communicate with ScanServer
 
 ## Getting Started
 
-This project is a starting point for a Flutter application.
+Contains 2 tabs:
+* Scan
+* Manage Files
 
-A few resources to get you started if this is your first Flutter project:
+## Scan
 
-- [Lab: Write your first Flutter app](https://flutter.dev/docs/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://flutter.dev/docs/cookbook)
+Scan file with a selectable quality and give it a name. Will use <filename>_<count> as fileName if there is already a file with that name.
+Example: file "test.pdf" exists already and a new scan is requested with that name. The name of the newly scanned file will therefore be change to "test_0.pdf", "test_1.pdf" and so on accordingly
+  
+## Manage Files
 
-For help getting started with Flutter, view our
-[online documentation](https://flutter.dev/docs), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Displays a list of files of the current directory (e.g. current date - all files from today).
+There, files can be deleted, or merged together. Naming of resulting files is like in Scan.
