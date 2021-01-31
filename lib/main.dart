@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:scan_app/pages/UpdateWidget.dart';
 import 'pages/ScanHomePage.dart';
 
 void main() {
@@ -28,9 +29,15 @@ class MyApp extends StatelessWidget {
           // closer together (more dense) than on mobile platforms.
           visualDensity: VisualDensity.adaptivePlatformDensity,
         ),
+        initialRoute: '/mainScreen',
         home:
             //SelectListPage()
-            ScanHomePage(title: 'Scan App')
+            ScanHomePage(title: 'Scan App'),
+        routes: <String, WidgetBuilder>{
+          '/mainScreen': (BuildContext context) =>
+              ScanHomePage(title: 'Scan App'),
+          '/update': (BuildContext context) => UpdateScreen()
+        }
         // HomePage()
         //MyHomePage(title: 'Scan App')
         );

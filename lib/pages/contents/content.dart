@@ -23,7 +23,8 @@ abstract class ContentState<T extends Content> extends State<T> {
           : Column(children: [
               Text(getTitle()),
               buildSpecificContent(context),
-              buildActionButton()
+              buildActionButton(),
+              buildUpdateButton()
             ]);
     });
   }
@@ -35,6 +36,12 @@ abstract class ContentState<T extends Content> extends State<T> {
   String getTitle();
   Future successfullExcecutionCallBack(dynamic returnValue);
   String getMainButtonText();
+
+  Widget buildUpdateButton() {
+    return RaisedButton(
+        onPressed: () => Navigator.of(context).pushReplacementNamed('/update'),
+        child: Text("CheckForUpdates"));
+  }
 
   /// "main" purpose button on the bottom of the screen
   Widget buildActionButton() {

@@ -2,11 +2,16 @@ package com.example.scan_app;
 
 import android.os.StrictMode;
 import android.text.TextUtils;
+import android.content.Intent;
+
+import java.io.File;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
+
+import android.net.Uri;
 
 import androidx.annotation.NonNull;
 import data.packages.implementations.*;
@@ -46,6 +51,9 @@ public class MainActivity extends FlutterActivity {
                             case "getRequest":
                                 runnable = getRequestRunnable(call, result);
                                 break;
+                            // case "shareMailRequest":
+                            //     runnable = shareMailRunnable(call, result);
+                            //     break;
                             default:
                                 result.notImplemented();
                                 return;
@@ -54,6 +62,37 @@ public class MainActivity extends FlutterActivity {
                     }
             );
   }
+
+  // private Runnable shareMailRunnable(MethodCall call, MethodChannel.Result result) {
+  //    Runnable r = () -> {
+  //      try
+  //      {
+  //         ArrayList<String> filePaths = call.argument("FilePaths");
+  //         ArrayList<Uri> files = new ArrayList<Uri>();
+  //         for(String path : filePaths)
+  //         {
+  //            File file = new File(path);
+  //            Uri uri = Uri.fromFile(file);
+  //            files.add(uri);
+  //         }
+  //         String shareMessage = call.argument("ShareMessage");
+  //         Intent intent = new Intent(Intent.ACTION_SEND_MULTIPLE);
+  //         intent.setType("message/rfc822");
+  //         intent.putExtra(Intent.EXTRA_EMAIL, new String[0]);
+  //         intent.putExtra(Intent.EXTRA_SUBJECT, "");
+  //         intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, files);
+  //         startActivity(Intent.createChooser(intent, shareMessage));
+  //         runOnUiThread(() -> result.success(true));
+  //      }
+  //      catch(Exception e)
+  //      {
+  //         e.printStackTrace();
+  //         System.out.println("failed to make intent: " + e.getMessage());
+  //         runOnUiThread(() -> result.success(false));
+  //      }
+  //   };
+  //   return r;
+  // }
 
   private Runnable getRequestRunnable(MethodCall call, MethodChannel.Result result){
     Runnable r = () -> {
@@ -70,6 +109,7 @@ public class MainActivity extends FlutterActivity {
       Runnable r = () -> {
       String resultFileName = call.argument("FileName");
       ArrayList<String> mergeFileNames = call.argument("FileNames");
+      System.out.println("Files to merge: " + String.join(", ", mergeFileNames));
       boolean mergeResult = new PackageDataMerge(resultFileName, mergeFileNames).Execute();
       System.out.println("MergeResult: " + mergeResult);
         runOnUiThread(() -> result.success(mergeResult));
