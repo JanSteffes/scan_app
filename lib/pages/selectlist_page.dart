@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:scan_app/models/ListItem.dart';
+import 'package:scan_app/models/listmodels/list_item.dart';
 
 class SelectListPage extends StatefulWidget {
   @override

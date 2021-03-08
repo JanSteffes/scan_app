@@ -14,7 +14,11 @@ import java.util.stream.Stream;
 import android.net.Uri;
 
 import androidx.annotation.NonNull;
-import data.packages.implementations.*;
+
+import data.Config;
+import data.packages.implementations.PackageData.*;
+import data.packages.interfaces.*;
+
 import io.flutter.embedding.android.FlutterActivity;
 import io.flutter.embedding.engine.FlutterEngine;
 import io.flutter.plugin.common.MethodCall;
@@ -22,6 +26,7 @@ import io.flutter.plugin.common.MethodChannel;
 
 public class MainActivity extends FlutterActivity {
   private static final String CHANNEL = "flutter.native/scanHelper";
+  private static final IStreamListener _streamListener = null;
 
   @Override
   public void configureFlutterEngine(@NonNull FlutterEngine flutterEngine) {
@@ -30,7 +35,7 @@ public class MainActivity extends FlutterActivity {
       StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
       StrictMode.setThreadPolicy(policy);
 
-    new MethodChannel(flutterEngine.getDartExecutor().getBinaryMessenger(), CHANNEL)
+      new MethodChannel(flutterEngine.getDartExecutor().getBinaryMessenger(), CHANNEL)
             .setMethodCallHandler(
                     (call, result) -> {
                         Runnable runnable;
@@ -39,8 +44,11 @@ public class MainActivity extends FlutterActivity {
                             case "scanRequest":
                                 runnable = scanRequestRunnable(call, result);
                                 break;
-                            case "listRequest":
-                                runnable = listRequestRunnable(result);
+                            case "listFoldersRequest":
+                                runnable = listFoldersRequestRunnable(result);
+                                break;
+                            case "listFilesRequest":
+                                runnable = listFilesRequestRunnable(call, result);
                                 break;
                             case "mergeRequest":
                                 runnable = mergeRequestRunnable(call, result);
@@ -51,10 +59,20 @@ public class MainActivity extends FlutterActivity {
                             case "getRequest":
                                 runnable = getRequestRunnable(call, result);
                                 break;
-                            // case "shareMailRequest":
-                            //     runnable = shareMailRunnable(call, result);
-                            //     break;
+                            case "checkUpdateRequest":
+                                runnable = checkUpdateRequestRunnable(call, result);
+                                break;
+                            case "updateRequest":
+                                runnable = updateRequestRunnable(call, result);
+                                break;
+                            case "switchEndpointRequest":
+                                runnable = switchEndpointRunnable(call, result);
+                                break;
+                            case "switchEnvironmentRequest":
+                                runnable = switchEnvironmentRunnable(call, result);
+                                break;
                             default:
+                                System.out.println("No implementation for " + call.method);
                                 result.notImplemented();
                                 return;
                         }
@@ -63,43 +81,71 @@ public class MainActivity extends FlutterActivity {
             );
   }
 
-  // private Runnable shareMailRunnable(MethodCall call, MethodChannel.Result result) {
-  //    Runnable r = () -> {
-  //      try
-  //      {
-  //         ArrayList<String> filePaths = call.argument("FilePaths");
-  //         ArrayList<Uri> files = new ArrayList<Uri>();
-  //         for(String path : filePaths)
-  //         {
-  //            File file = new File(path);
-  //            Uri uri = Uri.fromFile(file);
-  //            files.add(uri);
-  //         }
-  //         String shareMessage = call.argument("ShareMessage");
-  //         Intent intent = new Intent(Intent.ACTION_SEND_MULTIPLE);
-  //         intent.setType("message/rfc822");
-  //         intent.putExtra(Intent.EXTRA_EMAIL, new String[0]);
-  //         intent.putExtra(Intent.EXTRA_SUBJECT, "");
-  //         intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, files);
-  //         startActivity(Intent.createChooser(intent, shareMessage));
-  //         runOnUiThread(() -> result.success(true));
-  //      }
-  //      catch(Exception e)
-  //      {
-  //         e.printStackTrace();
-  //         System.out.println("failed to make intent: " + e.getMessage());
-  //         runOnUiThread(() -> result.success(false));
-  //      }
-  //   };
-  //   return r;
-  // }
+  private Runnable switchEnvironmentRunnable(MethodCall call, MethodChannel.Result result) {
+     Runnable r = () -> {
+        Config.switchDebug();
+        boolean debug = Config.getDebug();
+        runOnUiThread(() -> result.success(debug));
+    };
+    return r;
+  }
+
+  private Runnable switchEndpointRunnable(MethodCall call, MethodChannel.Result result) {
+    Runnable r = () -> {
+        Config.switchServer();
+        String newEndpoint = Config.getServer();
+        runOnUiThread(() -> result.success(newEndpoint));
+    };
+    return r;
+  }
+
+  private Runnable checkUpdateRequestRunnable(MethodCall call, MethodChannel.Result result) {
+    Runnable r = () -> {
+      String version = getVersion(call);
+      try
+      {
+        boolean updateCheckResult = new PackageDataUpdateCheck(version).execute(_streamListener);        
+        runOnUiThread(() -> result.success(updateCheckResult));
+      }
+      catch(Exception e)
+      {
+        runOnUiThread(() -> result.error("checkUpdateRequestRunnable", null, null));
+      }
+    };
+    return r;
+  }
+
+  private Runnable updateRequestRunnable(MethodCall call, MethodChannel.Result result) {
+    Runnable r = () -> {
+      String version = getVersion(call);
+      try
+      {
+        byte[] fileResult = new PackageDataUpdate(version).execute(_streamListener);
+        runOnUiThread(() -> result.success(fileResult));
+      }
+      catch(Exception e)
+      {
+        System.out.println("UpdateRequestResult Error!");
+        runOnUiThread(() -> result.error("updateRequestRunnable", null, null));
+      }
+    };
+    return r;
+  }
+
 
   private Runnable getRequestRunnable(MethodCall call, MethodChannel.Result result){
     Runnable r = () -> {
-      String fileName = call.argument("FileName");
-      byte[] fileResult = new PackageDataGetFile(fileName).Execute();
-      System.out.println("GetResult: " + fileResult.length + " bytes");
-      runOnUiThread(() -> result.success(fileResult));
+        String folderName = getFolderName(call);
+        String fileName = getFileName(call);
+      try
+      {
+        byte[] fileResult = new PackageDataGetFile(folderName, fileName).execute(_streamListener);
+        runOnUiThread(() -> result.success(fileResult));
+      }
+      catch(Exception e)
+      {
+        runOnUiThread(() -> result.error("getRequestRunnable", null, null));
+      }
     };
     return r;
   }
@@ -107,47 +153,124 @@ public class MainActivity extends FlutterActivity {
     private Runnable mergeRequestRunnable(MethodCall call, MethodChannel.Result result)
     {
       Runnable r = () -> {
-      String resultFileName = call.argument("FileName");
-      ArrayList<String> mergeFileNames = call.argument("FileNames");
-      System.out.println("Files to merge: " + String.join(", ", mergeFileNames));
-      boolean mergeResult = new PackageDataMerge(resultFileName, mergeFileNames).Execute();
-      System.out.println("MergeResult: " + mergeResult);
-        runOnUiThread(() -> result.success(mergeResult));
+        String folderName = getFolderName(call);
+        String resultFileName = getFileName(call);
+        ArrayList<String> mergeFileNames = getFileNames(call);
+        try
+        {
+          boolean mergeResult = new PackageDataMerge(folderName, resultFileName, mergeFileNames).execute(_streamListener);
+            runOnUiThread(() -> result.success(mergeResult));
+        }
+        catch(Exception e)
+        {
+          runOnUiThread(() -> result.error("mergeRequestRunnable", null, null));
+        }
       };
       return r;
     }
 
     private Runnable deleteRequestRunnable(MethodCall call, MethodChannel.Result result)
     {
-    Runnable r = () -> {
-        ArrayList<String> deleteFileNames = call.argument("FileNames");
-        boolean mergeResult = new PackageDataDelete(deleteFileNames).Execute();
-        System.out.println("DeleteResult: " + mergeResult);
-          runOnUiThread(() -> result.success(mergeResult));
-        };
+      Runnable r = () -> {
+        String folderName = getFolderName(call);
+        ArrayList<String> deleteFileNames = getFileNames(call);
+        try
+        {
+          boolean mergeResult = new PackageDataDelete(folderName, deleteFileNames).execute(_streamListener);
+          runOnUiThread(() -> result.success(mergeResult));      
+        }
+        catch(Exception e)
+        {
+          runOnUiThread(() -> result.error("deleteRequestRunnable", null, null));
+        }
+      };
     return r;
     }
 
-    private Runnable listRequestRunnable(MethodChannel.Result result) {
+    private Runnable listFoldersRequestRunnable(MethodChannel.Result result) {
       Runnable r = () -> {
-          String[] listResult = new PackageDataList().Execute();
-          System.out.println("ListResult: " + TextUtils.join(", ", listResult));
-          List<String> resultValue = new ArrayList<>(Arrays.asList(listResult));
-          runOnUiThread(() -> result.success(resultValue));
+        try
+        {
+          String[] listResult = new PackageDataListFolders().execute(_streamListener);
+          ProcessListResult(result, listResult);          
+        }
+        catch(Exception e)
+        {
+          runOnUiThread(() -> result.error("listRequestRunnable", null, null));
+        }
       };
       return r;
     }
 
+     private Runnable listFilesRequestRunnable(MethodCall call, MethodChannel.Result result) {
+      Runnable r = () -> {
+        try
+        {
+          String folderName = getFolderName(call);
+          String[] listResult = new PackageDataListFiles(folderName).execute(_streamListener);
+          ProcessListResult(result, listResult);
+        }
+        catch(Exception e)
+        {
+          runOnUiThread(() -> result.error("listRequestRunnable", null, null));
+        }
+      };
+      return r;
+    }    
+
     private Runnable scanRequestRunnable(MethodCall call, MethodChannel.Result result) {
         Runnable r = () -> {
-            String fileName = call.argument("FileName");
+            String folderName = getFolderName(call);
+            String fileName = getFileName(call);
             int scanQuality = call.argument("ScanQuality");
-            PackageDataScan packageData = new PackageDataScan(scanQuality, fileName);
-            boolean scanResult = packageData.Execute();
-            System.out.println("ScanResult: " + scanResult);
-            runOnUiThread(() -> result.success(scanResult));
+            try
+            {
+              PackageDataScan packageData = new PackageDataScan(folderName, scanQuality, fileName);
+              boolean scanResult = packageData.execute(_streamListener);
+              runOnUiThread(() -> result.success(scanResult));
+            }
+            catch(Exception e)
+            {
+              runOnUiThread(() -> result.error("scanRequestRunnable", null, null));
+            }
         };
 
         return r;
     }
+
+    
+    /**
+    * Process result of list request
+    */
+    private void ProcessListResult(MethodChannel.Result result, String[] listResult)
+    {
+        if (listResult == null)
+        {
+            listResult = new String[0];
+        }
+        List<String> resultValue = new ArrayList<>(Arrays.asList(listResult));
+        runOnUiThread(() -> result.success(resultValue)); 
+    }    
+
+    
+
+  private String getFolderName(MethodCall call)
+  {
+    return call.argument("FolderName");
+  }
+
+  private String getFileName(MethodCall call)
+  {
+    return call.argument("FileName");
+  }
+
+  private ArrayList<String> getFileNames(MethodCall call)
+  {
+    return call.argument("FileNames");
+  }
+
+  private String getVersion(MethodCall call)
+  {
+    return call.argument("Version");
+  }
 }
