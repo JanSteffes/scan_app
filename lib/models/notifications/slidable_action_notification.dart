@@ -1,8 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:scan_app/models/listmodels/slideable/slideable_action.dart';
 
-class SlideableActionNotification extends Notification {
-  final SlideableAction _slideableAction;
+abstract class SlideableActionNotification extends Notification {
+  final SlideableAction slideableAction;
 
-  const SlideableActionNotification(this._slideableAction);
+  const SlideableActionNotification(this.slideableAction);
 }

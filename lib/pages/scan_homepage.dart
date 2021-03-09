@@ -1,15 +1,16 @@
 import 'dart:developer';
 import 'dart:io';
 
+import 'package:async_builder/async_builder.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:install_plugin/install_plugin.dart';
+import 'package:intl/intl.dart';
 import 'package:package_info/package_info.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:provider/provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:scan_app/helper/network_helper.dart';
-import 'package:scan_app/models/datamodels/context_model.dart';
 import 'package:scan_app/models/enums/snackbar_type.dart';
 import 'package:scan_app/models/notifications/snackbar_notification.dart';
 
@@ -29,14 +30,20 @@ class _ScanHomePageState extends State<ScanHomePage> {
   static const _methodChannel =
       const MethodChannel('flutter.native/scanHelper');
   BuildContext scaffoldContext;
-  ContextModel contextModel;
   static const String _title = 'Scan App';
+
+  BuildContext _performUpdateDialogContext;
 
   @override
   void dispose() {
     // clear temp files
     getTemporaryDirectory().then((value) => value.delete(recursive: true));
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
   }
 
   @override
@@ -59,14 +66,12 @@ class _ScanHomePageState extends State<ScanHomePage> {
                 ],
               ),
             ),
-            body: Consumer<ContextModel>(builder: (context, model, child) {
-              return Builder(builder: (BuildContext scaffoldBuilderContext) {
-                scaffoldContext = scaffoldBuilderContext;
-                return NotificationListener<SnackbarNotification>(
-                    child: buildTabContents(),
-                    onNotification: (notification) => showSnackbar(
-                        notification.snackbarType, notification.message));
-              });
+            body: Builder(builder: (BuildContext scaffoldBuilderContext) {
+              scaffoldContext = scaffoldBuilderContext;
+              return NotificationListener<SnackbarNotification>(
+                  child: buildTabContents(),
+                  onNotification: (notification) => showSnackbar(
+                      notification.snackbarType, notification.message));
             })));
   }
 
@@ -112,6 +117,10 @@ class _ScanHomePageState extends State<ScanHomePage> {
             PopupMenuItem<String>(
               child: Text("Updates"),
               value: "update",
+            ),
+            PopupMenuItem<String>(
+              child: Text("App-Info"),
+              value: "appInfo",
             )
           ];
         });
@@ -129,6 +138,9 @@ class _ScanHomePageState extends State<ScanHomePage> {
         break;
       case "update":
         updateCheck();
+        break;
+      case "appInfo":
+        showAppInfo();
         break;
     }
   }
@@ -160,11 +172,11 @@ class _ScanHomePageState extends State<ScanHomePage> {
     if (!updateNeeded) {
       showSnackbar(SnackbarType.info, "Kein Update verfügbar");
     } else {
-      showUpdateDialog();
+      showUpdateDialog(packageName);
     }
   }
 
-  showUpdateDialog() {
+  showUpdateDialog(String packageName) {
     // set up the buttons
     showDialog(
       context: context,
@@ -174,8 +186,11 @@ class _ScanHomePageState extends State<ScanHomePage> {
             content:
                 Text("Soll das Update jetzt geladen und installiert werden?"),
             actions: [
-              FlatButton(child: Text("Ja"), onPressed: performUpdate),
-              FlatButton(
+              TextButton(
+                  child: Text("Ja"),
+                  onPressed: () =>
+                      showPerformUpdateDialog(alertContext, packageName)),
+              TextButton(
                 child: Text("Nein"),
                 onPressed: () => Navigator.pop(alertContext),
               ),
@@ -184,24 +199,130 @@ class _ScanHomePageState extends State<ScanHomePage> {
     );
   }
 
-  performUpdate() async {
+  showPerformUpdateDialog(
+      BuildContext oldAlertContext, String packageName) async {
+    Navigator.pop(oldAlertContext);
+    var permissionState = await Permission.storage.request();
+    if (permissionState.isGranted) {
+      showDialog(
+          context: context,
+          builder: (BuildContext alertContext) {
+            _performUpdateDialogContext = alertContext;
+            return AlertDialog(
+                title: Text("Update wird geladen.."),
+                content: CircularProgressIndicator());
+          });
+      loadUpdateData();
+    } else {
+      showSnackbar(SnackbarType.error, "Update konnte nicht geladen werden!");
+    }
+  }
+
+  Future loadUpdateData() async {
+    var data = await loadApkData();
+    // write update file to storage
+    var baseDirPath = await getExternalStorageDirectory();
+    var directoryPath =
+        Directory(p.join(baseDirPath.path, "com.example.scan_app"));
+    // var directoryPath = p.join(tempDirectory.path, "scan_app");
+    log("Path to directory: '$directoryPath'");
+    var tempFile = File(p.join(directoryPath.path, "latest.apk"));
+    var tempFilePath = tempFile.path;
+    log("FilePath: $tempFilePath");
+    try {
+      if (await tempFile.exists()) {
+        log("File exists, will delete...");
+        await tempFile.delete();
+        log("File deleted.");
+      }
+      log("Begin writing to storage...");
+      log("Creating directories $directoryPath");
+      var createdDir = await directoryPath.create(recursive: true);
+      if (!await createdDir.exists()) {
+        showSnackbar(SnackbarType.error, "Update fehlgeschlagen");
+        Navigator.pop(_performUpdateDialogContext);
+        return;
+      }
+      log("Create/Write to file $tempFilePath");
+      tempFile = await tempFile.writeAsBytes(data,
+          mode: FileMode.writeOnly, flush: true);
+    } on Exception catch (e) {
+      log("Exception: $e");
+    }
+    if (!await tempFile.exists()) {
+      showSnackbar(SnackbarType.error, "Update fehlgeschlagen");
+      Navigator.pop(_performUpdateDialogContext);
+      return;
+    }
+    var packageInfo = await PackageInfo.fromPlatform();
+    // remove previous alert
+    Navigator.pop(_performUpdateDialogContext);
+    showDialog(
+        context: context,
+        builder: (BuildContext alertContext) {
+          return AlertDialog(
+              title: Text("Update fertig geladen"),
+              content: Text("Soll das Update nun installiert werden?"),
+              actions: [
+                TextButton(
+                    child: Text("Ja"),
+                    onPressed: () =>
+                        installUpdate(packageInfo, tempFile, alertContext)),
+                TextButton(
+                    child: Text("Nein"),
+                    onPressed: () => Navigator.pop(alertContext))
+              ]);
+        });
+  }
+
+  showAppInfo() async {
+    PackageInfo packageInfo = await PackageInfo.fromPlatform();
+    int installDate = await _methodChannel.invokeMethod(
+        RequestType.installDateInfoRequest.toString().split('.').last);
+    var informationMapping = {
+      "App-Name": packageInfo.appName,
+      "Paket-Name": packageInfo.packageName,
+      "Version": packageInfo.version,
+      "Letzte Aktualisierung":
+          "${DateFormat('dd.MM.yyyy HH:mm').format(DateTime.fromMillisecondsSinceEpoch(installDate))} Uhr"
+      // "Build-Nummer": packageInfo.buildNumber
+    };
+    List<Widget> dialogInfoChildren = informationMapping.entries
+        .map((e) => Column(children: [
+              Text(
+                "${e.key}:",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              Text("${e.value}"),
+            ], crossAxisAlignment: CrossAxisAlignment.start))
+        .cast<Widget>()
+        .toList();
+    dialogInfoChildren.add(Container(color: Colors.green));
+    showDialog(
+        context: context,
+        builder: (BuildContext alertContext) {
+          return AlertDialog(
+              title: Text("App-Informationen"),
+              content: Column(
+                children: dialogInfoChildren,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+              ),
+              actions: [
+                TextButton(
+                  child: Text("Ok"),
+                  onPressed: () => Navigator.pop(alertContext),
+                ),
+              ]);
+        });
+  }
+
+  Future<List<int>> loadApkData() async {
     PackageInfo packageInfo = await PackageInfo.fromPlatform();
     String version = packageInfo.version;
-    String packageName = packageInfo.packageName;
     List<int> fileBytes =
         await NetworkHelper.loadUpdate(_methodChannel, context, version);
-    // write file to tempdir
-    if (fileBytes == null || fileBytes.isEmpty) {
-      showSnackbar(SnackbarType.error, "Update wurde nicht korrekt geladen!");
-    } else {
-      final tempDirectory = await getTemporaryDirectory();
-      var directoryPath = p.join(tempDirectory.path, "scan_app");
-      var tempFile = File('$directoryPath/latest.apk');
-      await Directory(directoryPath).create();
-      tempFile.writeAsBytesSync(fileBytes,
-          mode: FileMode.writeOnly, flush: true);
-      await InstallPlugin.installApk(tempFile.path, packageName);
-    }
+    return fileBytes;
   }
 
   showSnackbar(SnackbarType type, String message) {
@@ -231,5 +352,15 @@ class _ScanHomePageState extends State<ScanHomePage> {
   /// Small horizontal spacer
   Widget getHorizontalSpacer() {
     return Container(width: 10, height: 0);
+  }
+
+  installUpdate(
+      PackageInfo packageInfo, File tempFile, BuildContext alertContext) async {
+    try {
+      await InstallPlugin.installApk(tempFile.path, packageInfo.packageName);
+      Navigator.pop(alertContext);
+    } on Exception catch (e) {
+      log("Exception while installing: $e");
+    }
   }
 }

@@ -6,14 +6,13 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:scan_app/helper/network_helper.dart';
-import 'package:scan_app/models/datamodels/context_model.dart';
+import 'package:scan_app/models/datamodels/selected_files.dart';
 import 'package:scan_app/models/enums/snackbar_type.dart';
-import 'package:scan_app/models/listmodels/file_item.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:scan_app/models/listmodels/slideable/slideable_action.dart';
 import 'package:scan_app/models/notifications/snackbar_notification.dart';
-import 'package:scan_app/widgets/file_list_controller.dart';
-import 'package:scan_app/widgets/folder_file_view.dart';
+import 'package:scan_app/widgets/file_List/folder_file_view.dart';
+import 'package:scan_app/widgets/merge_view/merge_view.dart';
 import 'package:share/share.dart';
 import 'package:path/path.dart' as p;
 
@@ -27,28 +26,33 @@ class ManageFilesContent extends StatefulWidget {
 class _ManageFilesState extends State<ManageFilesContent> {
   static const _methodChannel =
       const MethodChannel('flutter.native/scanHelper');
-  TextEditingController _fileNameTextController = TextEditingController();
-  static const String _mainButtonText = "zusammenführen";
-  static const String _mainButtonNoFileText = "Mindestens 2 Dateien auswählen!";
-  static const String _noFileName = "Dateiname angeben!";
-
-  FileListController _fileListController = FileListController();
   Future _folderLoadFuture;
+
+  TextEditingController _fileNameTextController = TextEditingController();
+
+  SelectedFolder _selectedFolderRef;
+  SelectedFiles _selectedFilesRef;
 
   @override
   void initState() {
     super.initState();
-    // WidgetsBinding.instance.addPostFrameCallback(
-    //     (_) => refreshFolders().then((value) => refreshFileList()));
     _folderLoadFuture = loadFolders();
   }
 
   @override
+  void dispose() {
+    _selectedFilesRef.clearFiles(true);
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext buildContext) {
+    _selectedFolderRef = Provider.of<SelectedFolder>(context, listen: false);
+    _selectedFilesRef = Provider.of<SelectedFiles>(context, listen: false);
     return Column(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
       buildFolderSelection(),
       SizedBox(height: 10),
-      buildMergeView()
+      MergeView(mergeFiles, _fileNameTextController)
     ]);
   }
 
@@ -57,7 +61,11 @@ class _ManageFilesState extends State<ManageFilesContent> {
         future: _folderLoadFuture,
         waiting: (context) => CircularProgressIndicator(),
         builder: (context, List<String> data) {
-          return FolderFileView(_fileListController, data, loadFiles, {
+          var currentFolder = _selectedFolderRef.getSelectedFolder();
+          if (currentFolder == null || !data.contains(currentFolder)) {
+            _selectedFolderRef.setFolder(data.first, true);
+          }
+          return FolderFileView(data, loadFiles, {
             SlideableAction.see: showFile,
             SlideableAction.delete: deleteFile,
             SlideableAction.share: shareFile
@@ -68,52 +76,12 @@ class _ManageFilesState extends State<ManageFilesContent> {
             style: TextStyle(color: Colors.red)));
   }
 
-  Widget buildMergeView() {
-    return Column(children: [buildFileNameOption(), buildMergeButton()]);
+  String getSelectedFolder() {
+    return _selectedFolderRef.getSelectedFolder();
   }
 
-  Widget buildFileNameOption() {
-    return TextField(
-        decoration: InputDecoration(
-          border: const OutlineInputBorder(),
-          hintText: 'Dateiname',
-        ),
-        autocorrect: false,
-        controller: _fileNameTextController);
-  }
-
-  buildMergeButton() {
-    var mainButtonText = getMergeButtonText();
-    return RaisedButton(
-        onPressed: () => validateMergeInput()
-            ? () => NetworkHelper.mergeFiles(
-                _methodChannel,
-                context,
-                _fileListController.folderName,
-                _fileNameTextController.text,
-                getSelectedFiles().map((v) => v.fileName).toList())
-            : null,
-        child: Text(mainButtonText));
-  }
-
-  Widget buildLegendItem(IconData icon, String text) {
-    return Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [Icon(icon), Text(text)]);
-  }
-
-  bool validateMergeInput() {
-    var selectedFiles = getSelectedFiles();
-    return selectedFiles != null &&
-        selectedFiles.length > 1 &&
-        _fileNameTextController.text.isNotEmpty;
-  }
-
-  List<FileItem> getSelectedFiles() {
-    return _fileListController.selectedFiles;
-  }
-
-  Future showFile(String folderName, String fileName) async {
+  Future showFile(String fileName) async {
+    var folderName = getSelectedFolder();
     var fileBytes = await NetworkHelper.getFileBytes(
         _methodChannel, context, folderName, fileName);
     // open with pdf
@@ -124,9 +92,9 @@ class _ManageFilesState extends State<ManageFilesContent> {
         ));
   }
 
-  Future shareFile(String folderName, String fileName) async {
+  Future shareFile(String fileName) async {
     var fileBytes = await NetworkHelper.getFileBytes(
-        _methodChannel, context, folderName, fileName);
+        _methodChannel, context, getSelectedFolder(), fileName);
     // store file in temp folder
     var tempFolder = await getTemporaryDirectory();
     var tempFilePath = p.join(tempFolder.path, fileName);
@@ -138,22 +106,10 @@ class _ManageFilesState extends State<ManageFilesContent> {
         text: "Datei '$fileName' versenden über..");
   }
 
-  // validates inputs / selected files
-  String getMergeButtonText() {
-    if (_fileNameTextController.text == null ||
-        _fileNameTextController.text.isEmpty) {
-      return _noFileName;
-    }
-    var selectedFilesCount = getSelectedFiles()?.length ?? 0;
-    return selectedFilesCount < 2
-        ? _mainButtonNoFileText
-        : selectedFilesCount.toString() + " Dateien " + _mainButtonText;
-  }
-
-  Future deleteFile(String folderName, String fileName) async {
+  Future deleteFile(String fileName) async {
     return {
       if (await NetworkHelper.deleteFile(
-          _methodChannel, context, folderName, fileName))
+          _methodChannel, context, getSelectedFolder(), fileName))
         {
           SnackbarNotification(
               SnackbarType.success, "Datei $fileName wurde gelöscht")
@@ -168,9 +124,16 @@ class _ManageFilesState extends State<ManageFilesContent> {
     };
   }
 
-  /// Get current selected folder of contextModel
-  String getCurrentWorkingFolder() =>
-      Provider.of<ContextModel>(context, listen: false).getFolder();
+  List<String> getSelectedFiles() {
+    return Provider.of<SelectedFiles>(context, listen: false)
+        .getSelectedFiels();
+  }
+
+  Future<bool> mergeFiles() async {
+    var result = await NetworkHelper.mergeFiles(_methodChannel, context,
+        getSelectedFolder(), _fileNameTextController.text, getSelectedFiles());
+    return result;
+  }
 
   // load remote data
 
@@ -181,7 +144,7 @@ class _ManageFilesState extends State<ManageFilesContent> {
       files.sort((first, second) => first.compareTo(second));
       return files;
       // should be sorted by latest already
-    } on Exception catch (e) {
+    } on Exception {
       SnackbarNotification(
           SnackbarType.error, "Fehler bei Abruf der Orderliste!");
     }
@@ -195,7 +158,7 @@ class _ManageFilesState extends State<ManageFilesContent> {
           await NetworkHelper.listFolders(_methodChannel, context);
       return folders;
       // should be sorted by latest already
-    } on Exception catch (e) {
+    } on Exception {
       SnackbarNotification(
           SnackbarType.error, "Fehler bei Abruf der Orderliste!");
     }

@@ -1,24 +1,25 @@
 package com.example.scan_app;
 
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.os.StrictMode;
-import android.text.TextUtils;
-import android.content.Intent;
 
-import java.io.File;
+import androidx.annotation.NonNull;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Stream;
-
-import android.net.Uri;
-
-import androidx.annotation.NonNull;
 
 import data.Config;
-import data.packages.implementations.PackageData.*;
-import data.packages.interfaces.*;
-
+import data.packages.implementations.PackageData.PackageDataDelete;
+import data.packages.implementations.PackageData.PackageDataGetFile;
+import data.packages.implementations.PackageData.PackageDataListFiles;
+import data.packages.implementations.PackageData.PackageDataListFolders;
+import data.packages.implementations.PackageData.PackageDataMerge;
+import data.packages.implementations.PackageData.PackageDataScan;
+import data.packages.implementations.PackageData.PackageDataUpdate;
+import data.packages.implementations.PackageData.PackageDataUpdateCheck;
+import data.packages.interfaces.IStreamListener;
 import io.flutter.embedding.android.FlutterActivity;
 import io.flutter.embedding.engine.FlutterEngine;
 import io.flutter.plugin.common.MethodCall;
@@ -71,6 +72,9 @@ public class MainActivity extends FlutterActivity {
                             case "switchEnvironmentRequest":
                                 runnable = switchEnvironmentRunnable(call, result);
                                 break;
+                            case "installDateInfoRequest":
+                                runnable = getInstallDateInfoRunnable(call, result);
+                                break;
                             default:
                                 System.out.println("No implementation for " + call.method);
                                 result.notImplemented();
@@ -79,6 +83,25 @@ public class MainActivity extends FlutterActivity {
                         new Thread(runnable).start();
                     }
             );
+  }
+
+  private Runnable getInstallDateInfoRunnable(MethodCall call, MethodChannel.Result result) {
+    Runnable r = () -> {
+        Long installDate  = null;
+        try {
+            PackageInfo packageInfo = getPackageManager()
+                    .getPackageInfo(getPackageName(), 0);
+            installDate = Math.max(packageInfo.firstInstallTime, packageInfo.lastUpdateTime);
+        } catch (PackageManager.NameNotFoundException e) {
+            e.printStackTrace();
+            if (installDate != null) {
+                installDate = null;
+            }
+        }
+        Long finalInstallDate = installDate;
+        runOnUiThread(() -> result.success(finalInstallDate));
+    };
+    return r;
   }
 
   private Runnable switchEnvironmentRunnable(MethodCall call, MethodChannel.Result result) {

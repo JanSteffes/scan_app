@@ -8,5 +8,6 @@ enum RequestType {
   checkUpdateRequest,
   updateRequest,
   switchEndpointRequest,
-  switchEnvironmentRequest
+  switchEnvironmentRequest,
+  installDateInfoRequest
 }

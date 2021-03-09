@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'models/datamodels/context_model.dart';
+import 'package:scan_app/models/datamodels/selected_files.dart';
 import 'pages/init_screen.dart';
 import 'pages/scan_homepage.dart';
 
 void main() {
   runApp(ChangeNotifierProvider(
-      create: (context) => ContextModel(), child: MyApp()));
+      create: (context) => SelectedFiles(),
+      child: ChangeNotifierProvider(
+          create: (context) => SelectedFolder(), child: MyApp())));
 }
 
 class MyApp extends StatelessWidget {

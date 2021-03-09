@@ -5,17 +5,13 @@ import 'package:scan_app/models/listmodels/file_item.dart';
 import 'package:scan_app/models/listmodels/list_item.dart';
 import 'package:scan_app/models/listmodels/slideable/slideable_action.dart';
 import 'package:scan_app/models/listmodels/slideable_widget.dart';
-import 'package:scan_app/widgets/file_list_controller.dart';
+import 'package:scan_app/models/notifications/slideable_selectaction_notification.dart';
 
 class FilesList extends StatefulWidget {
-  final FileListController _fileListController;
   final List<String> _fileNames;
-  final Map<SlideableAction, Function(String, String)>
-      _slideActionFuctionsMapping;
+  final Map<SlideableAction, Function(String)> _slideActionFuctionsMapping;
 
-  FilesList(this._fileNames, this._fileListController,
-      this._slideActionFuctionsMapping,
-      {Key key})
+  FilesList(this._fileNames, this._slideActionFuctionsMapping, {Key key})
       : super(key: key);
 
   @override
@@ -32,12 +28,6 @@ class _FilesListState<FileList> extends State<FilesList> {
 
   _FilesListState(List<String> _fileNames) {
     _listItems = _fileNames.map((e) => ListItem(FileItem(e))).toList();
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    widget._fileListController.selectedFiles = null;
   }
 
   @override
@@ -138,12 +128,11 @@ class _FilesListState<FileList> extends State<FilesList> {
     switch (slideAction) {
       case SlideableAction.see:
       case SlideableAction.share:
-        widget._slideActionFuctionsMapping[slideAction].call(
-            widget._fileListController.folderName, widget._fileNames[index]);
+        widget._slideActionFuctionsMapping[slideAction]
+            .call(_listItems[index].data.fileName);
         break;
       case SlideableAction.delete:
-        showDeleteFileDialog(
-            widget._fileListController.folderName, widget._fileNames[index]);
+        showDeleteFileDialog(_listItems[index].data.fileName);
         break;
       case SlideableAction.selectForMerge:
         selectFile(index);
@@ -151,7 +140,7 @@ class _FilesListState<FileList> extends State<FilesList> {
     }
   }
 
-  showDeleteFileDialog(String folderName, String fileName) {
+  showDeleteFileDialog(String fileName) {
     // set up the buttons
     showDialog(
       context: context,
@@ -167,7 +156,11 @@ class _FilesListState<FileList> extends State<FilesList> {
                         Navigator.pop(alertContext),
                         widget
                             ._slideActionFuctionsMapping[SlideableAction.delete]
-                            .call(folderName, fileName)
+                            .call(fileName),
+                        setState(() => {
+                              _listItems.removeWhere((element) =>
+                                  element.data.fileName == fileName)
+                            })
                       }),
               FlatButton(
                 child: Text("Nein"),
@@ -179,6 +172,7 @@ class _FilesListState<FileList> extends State<FilesList> {
   }
 
   void selectFile(int index) {
+    var isSelectAction = !_listItems[index].isSelected;
     setState(() {
       _listItems[index].isSelected = !_listItems[index].isSelected;
       if (_listItems[index].isSelected) {
@@ -214,10 +208,9 @@ class _FilesListState<FileList> extends State<FilesList> {
           selectedFile.data.selectIndex = selectedFile.data.selectIndex - 1;
         }
       }
-      widget._fileListController.setFiles(_listItems
-          .where((element) => element.isSelected)
-          .map((e) => e.data)
-          .toList());
     });
+    SlideableSelectActionNotification(SlideableAction.selectForMerge,
+        isSelectAction, _listItems[index].data.fileName)
+      ..dispatch(context);
   }
 }
