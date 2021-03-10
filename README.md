@@ -23,30 +23,30 @@ There, files can be deleted, shown, or merged together. Naming of resulting file
 
 ### AppBarActions:
 
-<img src="https://github.com/JanSteffes/scan_app/blob/develop/readme_images/AppBar_Actions.png?raw=true" alt="Available Functions in AppBar" width="13%"></img>
+<img src="https://github.com/JanSteffes/scan_app/blob/develop/readme_images/AppBar_Actions.png?raw=true" alt="Available Functions in AppBar" width="35%"></img>
 
 #### AppInfo
 
-<img src="https://github.com/JanSteffes/scan_app/blob/develop/readme_images/AppBar_Actions_AppInfo.png?raw=true" alt="Information about app" width="13%"></img>
+<img src="https://github.com/JanSteffes/scan_app/blob/develop/readme_images/AppBar_Actions_AppInfo.png?raw=true" alt="Information about app" width="35%"></img>
 
 ### ScanMenu:
 
-<img src="https://github.com/JanSteffes/scan_app/blob/develop/readme_images/ScanMenu.png?raw=true" alt="Menu to scan new files" width="13%"></img> 
+<img src="https://github.com/JanSteffes/scan_app/blob/develop/readme_images/ScanMenu.png?raw=true" alt="Menu to scan new files" width="35%"></img> 
 
 ### FileMenu:
 
 #### Swipe Actions
 
 ##### Right
-<img src="https://github.com/JanSteffes/scan_app/blob/develop/readme_images/FileMenu_SlideActions_Right.png?raw=true" alt="Additional actions by swipe to the right" width="13%"></img> 
+<img src="https://github.com/JanSteffes/scan_app/blob/develop/readme_images/FileMenu_SlideActions_Right.png?raw=true" alt="Additional actions by swipe to the right" width="35%"></img> 
 
 
 ##### Left
 
-<img src="https://github.com/JanSteffes/scan_app/blob/develop/readme_images/FileMenu_SlideActions_Left.png?raw=true" alt="AdditionalActions by swipe to left" width="13%"></img> 
+<img src="https://github.com/JanSteffes/scan_app/blob/develop/readme_images/FileMenu_SlideActions_Left.png?raw=true" alt="AdditionalActions by swipe to left" width="35%"></img> 
 
 #### Merge Files
-<img src="https://github.com/JanSteffes/scan_app/blob/develop/readme_images/FileMenu_MergeReady.png?raw=true" alt="Merge ready" width="13%"></img> 
+<img src="https://github.com/JanSteffes/scan_app/blob/develop/readme_images/FileMenu_MergeReady.png?raw=true" alt="Merge ready" width="35%"></img> 
 
 ## TODO:
 
