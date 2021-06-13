@@ -20,7 +20,7 @@ class FilesList extends StatefulWidget {
 
 class _FilesListState<FileList> extends State<FilesList> {
   /// list of files
-  List<ListItem<FileItem>> _listItems = List<ListItem<FileItem>>();
+  List<ListItem<FileItem>> _listItems = <ListItem<FileItem>>[];
   SlidableController _slideableController = SlidableController();
 
   /// index for files to merge, e.g. next selected file will get this index
@@ -81,7 +81,7 @@ class _FilesListState<FileList> extends State<FilesList> {
     var fileItem = fileTile.data;
     var fileName = fileItem.fileName;
 
-    var rowChildren = List<Widget>();
+    var rowChildren = <Widget>[];
     var fileInfoChild = Expanded(
         flex: 5,
         child: Tooltip(
@@ -150,7 +150,7 @@ class _FilesListState<FileList> extends State<FilesList> {
             content:
                 Text("Soll die Datei '$fileName' wirklich gelöscht werden?"),
             actions: [
-              FlatButton(
+              TextButton(
                   child: Text("Ja"),
                   onPressed: () async => {
                         Navigator.pop(alertContext),
@@ -162,7 +162,7 @@ class _FilesListState<FileList> extends State<FilesList> {
                                   element.data.fileName == fileName)
                             })
                       }),
-              FlatButton(
+              TextButton(
                 child: Text("Nein"),
                 onPressed: () => Navigator.pop(alertContext),
               ),

@@ -1,3 +1,6 @@
+import 'dart:developer';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -5,6 +8,10 @@ import 'package:scan_app/helper/network_helper.dart';
 import 'package:scan_app/models/enums/snackbar_type.dart';
 import 'package:scan_app/models/notifications/snackbar_notification.dart';
 import 'package:tuple/tuple.dart';
+
+class PackageDataListFolders {
+  static final int serialVersionUID = 8483857577336184959;
+}
 
 class ScanContent extends StatefulWidget {
   ScanContent({Key key}) : super(key: key);
@@ -37,12 +44,43 @@ class _ScanContentState extends State<ScanContent> {
   @override
   Widget build(BuildContext buildContext) {
     return Column(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
+      buildTest(),
       Row(children: [buildScanFolderView(), Expanded(child: Container())]),
       SizedBox(height: 10),
       buildScanQualityMenu(),
       buildFileNameOption(),
       buildScanButton()
     ]);
+  }
+
+  Widget buildTest() {
+    return TextButton(child: Text("Hello"), onPressed: doSocketStuff);
+  }
+
+  void doSocketStuff() async {
+    var socket = await Socket.connect("Jan.home", 1233);
+    try {
+      // socket.write(24);
+      socket.writeln("Hallo!");
+      await socket.flush();
+      socket.listen(dataHandler,
+          onError: errorHandler, onDone: doneHandler, cancelOnError: false);
+    } finally {
+      socket.close();
+      socket.destroy();
+    }
+  }
+
+  void dataHandler(data) {
+    log("Got data: $data");
+  }
+
+  void errorHandler(error, StackTrace stackTrace) {
+    log("Error happend: $error");
+  }
+
+  void doneHandler() {
+    log("done");
   }
 
   Widget buildScanFolderView() {
@@ -94,7 +132,7 @@ class _ScanContentState extends State<ScanContent> {
   // build button to scan
   Widget buildScanButton() {
     var validInputs = validateInputs();
-    return RaisedButton(
+    return ElevatedButton(
         onPressed: validInputs ? () => scanFile() : null,
         child: Text(validInputs ? "Scannen" : _noFileNameText));
   }

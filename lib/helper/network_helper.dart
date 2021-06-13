@@ -70,7 +70,7 @@ class NetworkHelper {
   /// delete single file
   static Future<bool> deleteFile(MethodChannel methodChannel,
       BuildContext callingContext, String folderName, String fileName) async {
-    var fileNames = List<String>();
+    var fileNames = <String>[];
     fileNames.add(fileName);
     return await deleteFiles(
         methodChannel, callingContext, folderName, fileNames);

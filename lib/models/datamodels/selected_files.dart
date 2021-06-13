@@ -4,7 +4,7 @@ class SelectedFiles extends ChangeNotifier {
   List<String> _selectedFiles;
 
   SelectedFiles() {
-    _selectedFiles = List<String>();
+    _selectedFiles = <String>[];
   }
 
   int getCount() => _selectedFiles.length;

@@ -37,7 +37,7 @@ class _MergeViewState extends State<MergeView> {
   buildMergeButton() {
     return Consumer<SelectedFiles>(builder: (context, selectedFiles, child) {
       var mainButtonText = getMergeButtonText();
-      return RaisedButton(
+      return ElevatedButton(
           onPressed: validateMergeInput() ? widget.mergeFunction.call : null,
           child: Text(mainButtonText));
     });

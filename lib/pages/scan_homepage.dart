@@ -1,10 +1,10 @@
 import 'dart:developer';
 import 'dart:io';
 
+import 'package:app_installer/app_installer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-import 'package:install_plugin/install_plugin.dart';
 import 'package:intl/intl.dart';
 import 'package:package_info/package_info.dart';
 import 'package:path_provider/path_provider.dart';
@@ -253,7 +253,6 @@ class _ScanHomePageState extends State<ScanHomePage> {
       Navigator.pop(_performUpdateDialogContext);
       return;
     }
-    var packageInfo = await PackageInfo.fromPlatform();
     // remove previous alert
     Navigator.pop(_performUpdateDialogContext);
     showDialog(
@@ -265,8 +264,7 @@ class _ScanHomePageState extends State<ScanHomePage> {
               actions: [
                 TextButton(
                     child: Text("Ja"),
-                    onPressed: () =>
-                        installUpdate(packageInfo, tempFile, alertContext)),
+                    onPressed: () => installUpdate(tempFile, alertContext)),
                 TextButton(
                     child: Text("Nein"),
                     onPressed: () => Navigator.pop(alertContext))
@@ -343,7 +341,7 @@ class _ScanHomePageState extends State<ScanHomePage> {
         text = text ?? "Verarbeitung erfolgreich abgeschlossen";
         break;
     }
-    Scaffold.of(scaffoldContext).showSnackBar(SnackBar(
+    ScaffoldMessenger.of(scaffoldContext).showSnackBar(SnackBar(
         content: Row(
             children: [icon, getHorizontalSpacer(), Text(text, maxLines: 2)])));
   }
@@ -353,10 +351,9 @@ class _ScanHomePageState extends State<ScanHomePage> {
     return Container(width: 10, height: 0);
   }
 
-  installUpdate(
-      PackageInfo packageInfo, File tempFile, BuildContext alertContext) async {
+  installUpdate(File tempFile, BuildContext alertContext) async {
     try {
-      await InstallPlugin.installApk(tempFile.path, packageInfo.packageName);
+      await AppInstaller.installApk(tempFile.path);
       Navigator.pop(alertContext);
     } on Exception catch (e) {
       log("Exception while installing: $e");
