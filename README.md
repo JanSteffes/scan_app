@@ -1,3 +1,10 @@
+!! **won't be continued** !!
+in favor of [ScanClient](https://github.com/JanSteffes/scan_client) - also a flutter approach but with way more functionality
+
+
+
+
+
 # scan_app
 
 App to communicate with [ScanServer](https://github.com/JanSteffes/ScanServer)
@@ -21,6 +28,8 @@ There, files can be deleted, shown, or merged together. Naming of resulting file
 ## TODO:
 
 - [x] add PDF Viewer to view scanned pdfs
-- [ ] add more options to edit files (rename, rotate,..)
-- [ ] overwork views, they're mostly build for functionality, not to look good ;)
-- [ ] add some other design stuff, like splashscreen, icon, etc etc
+- [ ]  ~~add more options to edit files (rename, rotate,..)~~
+- [ ] ~~overwork views, they're mostly build for functionality, not to look good ;)~~
+- [ ] ~~add some other design stuff, like splashscreen, icon, etc etc~~
+
+  
